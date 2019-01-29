@@ -1,7 +1,7 @@
 const cmd = require('./cmd');
 const file = require('./file');
 // 提交185天前的记录
-let day = 80;
+let day = 120;
 const random = (lower, upper) => {
     return Math.floor(Math.random() * (upper - lower + 1)) + lower;
 }
