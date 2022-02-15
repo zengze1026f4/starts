@@ -6,15 +6,196 @@ name: release
 #   disable: true
 
 steps:
-  - name: ssh commands
+  - name: 编译分支源码
+    image: hub.perseus.ruqimobility.com/library/newadmin:0.0.9
+    pull: always
+    environment:
+      TZ: Asia/Shanghai
     commands:
       - ls -la
+      - ln -sfn /drone/node_modules node_modules
+      - CI=false npm run build
+      - ls -la
+      - pwd
+    when:
+      branch:
+        include:
+          - fix*
+          - feat*
+      event:
+        include:
+          - push
+          - merge
+
+  - name: 编译master源码
+    image: hub.perseus.ruqimobility.com/library/newadmin:0.0.9
+    pull: always
+    environment:
+      TZ: Asia/Shanghai
+    commands:
+      - ls -la
+      - ln -sfn /drone/node_modules node_modules
+      - CI=false npm run release-build
+      - ls -la
+      - pwd
+    when:
+      branch:
+        include:
+          - master
+      event:
+        include:
+          - push
+          - merge
+
+  - name: 部署到机器
+    image: hub.perseus.ruqimobility.com/library/newadminscp:build
+    pull: always
+    settings:
+      debug: true
+      SCP_SRC:
+        from_secret: SCP_SRC
+      SCP_DEST:
+        from_secret: SCP_DEST
+      SCP_HOST:
+        from_secret: SCP_HOST
+      SCP_USERNAME:
+        from_secret: SCP_USERNAME
+      SCP_PASSWORD:
+        from_secret: SCP_PASSWORD
+      SCP_PROT:
+        from_secret: SCP_PROT
+      SCP_NGINX_PATH:
+        from_secret: SCP_NGINX_PATH
+      SCP_IS_NGINX:
+        from_secret: SCP_NGINX
+    when:
+      branch:
+        include:
+          - fix*
+          - feat*
+
+      event:
+        include:
+          - push
+          - merge
+    commands:
+      - ls -la
+      - pwd
+      - cd /scp
+      - ls -la
+      - PLUGIN_BRANCH="$DRONE_BRANCH" PLUGIN_REPO="$DRONE_REPO_NAME" node index.js
+
+  - name: master部署到机器
+    image: hub.perseus.ruqimobility.com/library/newadminscp:build
+    pull: always
+    settings:
+      debug: true
+      SCP_SRC:
+        from_secret: SCP_SRC
+      SCP_DEST:
+        from_secret: SCP_REALEASE_DEST
+      SCP_HOST:
+        from_secret: SCP_REALEASE_HOST
+      SCP_USERNAME:
+        from_secret: SCP_REALEASE_USERNAME
+      SCP_PASSWORD:
+        from_secret: SCP_REALEASE_PASSWORD
+      SCP_PROT:
+        from_secret: SCP_REALEASE_PROT
+      SCP_NGINX_PATH:
+        from_secret: SCP_REALEASE_NGINX_PATH
+      SCP_DEST_DIRNAME:
+        from_secret: SCP_RELEASE_DIRNAME
+      SCP_IS_NGINX:
+        from_secret: SCP_REALEASE_NGINX
+    when:
+      branch:
+        include:
+          - master
+      event:
+        - push
+        - merge
+    commands:
+      - ls -la
+      - pwd
+      - cd /scp
+      - ls -la
+      - PLUGIN_BRANCH="$DRONE_BRANCH" PLUGIN_REPO="$DRONE_REPO_NAME" node index.js
+
+  - name: ssh commands
+    image: appleboy/drone-ssh
+    settings:
+      host:
+        from_secret: SCP_HOST
+      username:
+        from_secret: SCP_USERNAME
+      password:
+        from_secret: SCP_PASSWORD
+      port:
+        from_secret: SCP_PROT
+      script:
+        - nginx -s reload
+    when:
+      branch:
+        include:
+          - fix*
+          - feat*
+
+  - name: master部署到腾讯云机器
+    image: appleboy/drone-scp
+    pull: always
+    settings:
+      debug: true
+      source:
+        - dist/
+      host:
+        from_secret: SCP_REALEASE_HOST_V2
+      username:
+        from_secret: SCP_REALEASE_USERNAME_V2
+      password:
+        from_secret: SCP_REALEASE_PASSWORD_V2
+      port:
+        from_secret: SCP_REALEASE_PROT_V2
+      target: /usr/www/qiyuan-drone
+    when:
+      branch:
+        include:
+          - master
+      event:
+        include:
+          - push
+          - merge
+
+  - name: master部署到15机器
+    image: appleboy/drone-scp
+    pull: always
+    settings:
+      debug: true
+      source:
+        - dist/
+      host:
+        from_secret: SCP_15_HOST
+      username:
+        from_secret: SCP_15_USER
+      password:
+        from_secret: SCP_15_PWD
+      port:
+        from_secret: 22
+      target: /usr/www/qiyuan-drone
+    when:
+      branch:
+        include:
+          - master
+      event:
+        include:
+          - push
 
 trigger:
   branch:
     include:
       - master
-
+      - fix*
+      - feat*
   event:
     include:
       - push
