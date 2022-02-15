@@ -7,7 +7,7 @@ name: release
 
 steps:
   - name: ssh commands
-  commands:
+    commands:
       - ls -la
 
 trigger:
