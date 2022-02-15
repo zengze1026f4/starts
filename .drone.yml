@@ -1,0 +1,20 @@
+kind: pipeline
+type: docker
+name: release
+
+# clone:
+#   disable: true
+
+steps:
+  - name: ssh commands
+  commands:
+      - ls -la
+
+trigger:
+  branch:
+    include:
+      - master
+
+  event:
+    include:
+      - push
