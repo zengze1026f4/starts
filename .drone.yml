@@ -2,9 +2,6 @@ kind: pipeline
 type: docker
 name: release
 
-# clone:
-#   disable: true
-
 steps:
   - name: 编译分支源码
     commands:
